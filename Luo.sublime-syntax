@@ -63,8 +63,21 @@ contexts:
         6: variable.parameter.function.luo
         7: punctuation.definition.parameters.end.luo
 
+  comments:
+    # Single-line comment
+    - match: (?:--)(?!\[\[).*$\n?
+      scope: comment.line.double-dash.luo
+    
+    # Multi-line comment
+    - match: --\[(=*)\[
+      push:
+      - meta_scope: comment.block.luo
+      - match: \]\1\]
+        pop: true
+
   # Lua components that are use both within and out of a class
   literals:
+    - include: comments
     # Built-in constants
     - match: (?<![^.]\.|:)\b(false|nil|true|_G|_VERSION|math\.(pi|huge))\b|(?<![.])\.{3}(?!\.)
       scope: constant.language.luo
@@ -101,17 +114,6 @@ contexts:
       - match: \]\1\]
         pop: true
 
-    # Single-line comment
-    - match: (?:--)(?!\[\[).*$\n?
-      scope: comment.line.double-dash.luo
-    
-    # Multi-line comment
-    - match: --\[(=*)\[
-      push:
-      - meta_scope: comment.block.luo
-      - match: \]\1\]
-        pop: true
-
     # Word operators
     - match: \b(and|or|not)\b
       scope: keyword.operator.luo
@@ -139,6 +141,7 @@ contexts:
     - include: variable
 
   interface:
+    - include: comments
     - match: \b(end)\b
       set: main
       scope: keyword.control.luo
@@ -195,6 +198,7 @@ contexts:
             9: punctuation.definition.parameters.end.luo
 
   class:
+    - include: comments
     - match: \b(end)\b
       set: main
       scope: keyword.control.luo
