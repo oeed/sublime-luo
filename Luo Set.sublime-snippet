@@ -1,0 +1,7 @@
+<snippet>
+	<content><![CDATA[${3}set ${1:name}(${1:name})
+	${2}
+end]]></content>
+	<tabTrigger>se</tabTrigger>
+	<scope>source.luo</scope>
+</snippet>

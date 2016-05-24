@@ -1,0 +1,5 @@
+<snippet>
+	<content><![CDATA[local ${1:name}${2: = ${3:""}}]]></content>
+	<tabTrigger>lo</tabTrigger>
+	<scope>source.luo</scope>
+</snippet>

@@ -1,0 +1,503 @@
+%YAML 1.2
+---
+name: Luo
+file_extensions: [luo]
+scope: source.luo
+
+contexts:
+  # In the root of a file (i.e. the only place classes can be declared)
+  main:
+    - include: lua
+
+    # A class declaration
+    - match: \b(class)\s+([_A-z]\w*)\b
+      push: class-begin
+      captures:
+        1: keyword.declaration.luo
+        2: support.class.luo
+
+    - match: \b(interface)\s+([_A-z]\w*)\b
+      push: interface
+      captures:
+        1: keyword.declaration.luo
+        2: support.class.luo
+
+    - match: \b(end)\b
+      scope: invalid.illegal.expected-end
+
+
+  # Regular Lua (i.e. outside of classes or within class functions)
+  lua:
+    - include: literals
+
+    # Start of a if, for or while block
+    - match: \b(then|do)\b
+      scope: keyword.control.luo
+      push: block
+
+    # Non-block starting keywords
+    - match: \b(break|else|for|if|elseif|return|repeat|while|until|local|in)\b
+      scope: keyword.control.luo
+    
+    # A function declaration
+    - match: \b(function)\s+([a-zA-Z_.:]+[.:])?([a-zA-Z_]\w*)\s*(\()([^)]*)(\))
+      push: block
+      captures:
+        1: keyword.control.luo
+        2: entity.name.function.scope.luo
+        3: entity.name.function.luo
+        4: punctuation.definition.parameters.begin.luo
+        5: variable.parameter.function.luo
+        6: punctuation.definition.parameters.end.luo
+  
+    # An assignment declared/anonymous function
+    # Function assigned to a value manually
+    - match: ([a-zA-Z_.:]+[.:])?([a-zA-Z_]\w*)\s*(\=)\s*(function)\s*(\()([^)]*)(\))
+      push: block
+      captures:
+        1: entity.name.function.scope.luo
+        2: entity.name.function.luo
+        3: keyword.operator.luo
+        4: keyword.control.luo
+        5: punctuation.definition.parameters.begin.luo
+        6: variable.parameter.function.luo
+        7: punctuation.definition.parameters.end.luo
+
+  # Lua components that are use both within and out of a class
+  literals:
+    # Built-in constants
+    - match: (?<![^.]\.|:)\b(false|nil|true|_G|_VERSION|math\.(pi|huge))\b|(?<![.])\.{3}(?!\.)
+      scope: constant.language.luo
+
+    # Built-in functions
+    - match: (?<![^.]\.|:)\b(log|getfenv|getmetatable|ipairs|pairs|rawequal|rawget|rawset|setfenv|setmetatable|next|select|tonumber|tostring|type|unpack)\b(?=[({"''])
+      scope: support.function.luo
+    # Numbers
+    - match: (?<![\d.])\s0x[a-fA-F\d]+|\b\d+(\.\d+)?([eE]-?\d+)?|\.\d+([eE]-?\d+)?
+      scope: constant.numeric.luo
+
+    # Single-quoted string
+    - match: \'
+      push:
+      - meta_scope: string.quoted.single.luo
+      - match: \\.
+        scope: constant.character.escape.luo
+      - match: \'
+        pop: true
+
+    # Double-quoted string
+    - match: \"
+      push:
+      - meta_scope: string.quoted.single.luo
+      - match: \\.
+        scope: constant.character.escape.luo
+      - match: \"
+        pop: true
+
+    # Multi-line string
+    - match: \[(=*)\[
+      push:
+      - meta_scope: string.quoted.other.multiline.luo
+      - match: \]\1\]
+        pop: true
+
+    # Single-line comment
+    - match: (?:--)(?!\[\[).*$\n?
+      scope: comment.line.double-dash.luo
+    
+    # Multi-line comment
+    - match: --\[(=*)\[
+      push:
+      - meta_scope: comment.block.luo
+      - match: \]\1\]
+        pop: true
+
+    # Word operators
+    - match: \b(and|or|not)\b
+      scope: keyword.operator.luo
+
+    # Symbol operators
+    - match: \+|-|%|#|\*|\/|\^|==?|~=|<=?|>=?|(?<!\.)\.{2}(?!\.)
+      scope: keyword.operator.luo
+
+    # - include: variable
+
+
+  class-begin:
+    # extend/implements statement
+    - match: \b(extends|implements)\s+([_A-z]\w*)\b
+      captures:
+        1: keyword.declaration.luo
+        2: support.class.luo
+
+    - include: class
+    - include: error
+  
+  class-attribute-declaration:
+    - include: class
+    - include: literals
+    - include: variable
+
+  interface:
+    - match: \b(end)\b
+      set: main
+      scope: keyword.control.luo
+
+    - match: \b(static\s+)?(property)(?:(?:\s+([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})?(?:\s+(allowsNil|readOnly|link))?(?:\s+(allowsNil|readOnly|link))?(?:\s+(allowsNil|readOnly|link))?)?(\s+[_A-z]\w*)
+      set: interface
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: support.class.luo
+        6: support.class.luo
+        7: keyword.operator.luo
+        8: support.class.luo
+        9: keyword.other.luo
+        10: keyword.other.luo
+        11: keyword.other.luo
+        12: entity.other.attribute-name
+
+    # Function declaration
+    - match: \b(static\s+)?(function)
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: entity.other.attribute-name
+        4: variable.parameter.function.luo
+      push:
+        # Function name
+        - match: ([_A-z]\w*)\s*\(
+          scope: entity.other.attribute-name
+        # Return type with comma
+        - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})(\s+allowsNil)?)?\s*,
+          captures:
+            1: support.class.luo
+            2: support.class.luo
+            3: support.class.luo
+            4: support.class.luo
+            5: keyword.operator.luo
+            6: support.class.luo
+            7: keyword.other.luo
+        # Return type with the function name after it
+        - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})\s+(allowsNil\s+)?)?([_A-z]\w*)\s*(\()
+          push: parameters-interface
+          captures:
+            1: support.class.luo
+            2: support.class.luo
+            3: support.class.luo
+            4: support.class.luo
+            5: keyword.operator.luo
+            6: support.class.luo
+            7: keyword.other.luo
+            8: entity.other.attribute-name
+            9: punctuation.definition.parameters.end.luo
+
+  class:
+    - match: \b(end)\b
+      set: main
+      scope: keyword.control.luo
+
+    # Property declaration with default value
+    - match: \b(static\s+)?(property)(?:(?:\s+([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})?(?:\s+(allowsNil|readOnly|link))?(?:\s+(allowsNil|readOnly|link))?(?:\s+(allowsNil|readOnly|link))?)?(\s+[_A-z]\w*)\s*(=)
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: support.class.luo
+        6: support.class.luo
+        7: keyword.operator.luo
+        8: support.class.luo
+        9: keyword.other.luo
+        10: keyword.other.luo
+        11: keyword.other.luo
+        12: entity.other.attribute-name
+        13: keyword.operator.luo
+      push: class-attribute-declaration
+
+    # Property declaration without default value
+    - match: \b(static\s+)?(property)(?:(?:\s+([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})?(?:\s+(allowsNil|readOnly|link))?(?:\s+(allowsNil|readOnly|link))?(?:\s+(allowsNil|readOnly|link))?)?(\s+[_A-z]\w*)
+      set: class
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: support.class.luo
+        6: support.class.luo
+        7: keyword.operator.luo
+        8: support.class.luo
+        9: keyword.other.luo
+        10: keyword.other.luo
+        11: keyword.other.luo
+        12: entity.other.attribute-name
+
+    # Default value declaration
+    - match: \b(static\s+)?(default)\s+([_A-z]\w*)\s*(=)
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: entity.other.attribute-name
+      push: class-attribute-declaration
+
+    # Instance variable declaration
+    - match: \b(static\s+)?(local)\s+([_A-z]\w*)\s*(=)
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: entity.other.attribute-name
+      push: class-attribute-declaration
+
+    # Instance variable declaration
+    - match: \b(static\s+)?(enum)\s+([_A-z]\w*)\s+([_A-z]\w*)\s*(=)
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: support.class.luo
+        4: entity.other.attribute-name
+      push:
+        - match: (\{)
+          scope: keyword.declaration.luo
+          push:
+          # Capture keys
+          - match: ([_A-z]\w*)\s*(=)
+            captures: 
+              1: constant.language.luo
+              2: keyword.operator.luo
+            push: 
+              - match: (\})
+                scope: keyword.declaration.luo
+                set: class
+              - match: \,
+                pop: true
+              - include: enum-table
+
+          - match: (\})
+            scope: keyword.declaration.luo
+            set: class
+
+    # Get property method declaration
+    - match: \b(static\s+)?(get)\s+([_A-z]\w*)\s*\(\s*\)
+      push: class-block
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: entity.other.attribute-name
+
+    # Set property method declaration
+    - match: \b(static\s+)?(willSet|didSet|set)\s+([_A-z]\w*)\s*\(\s*([_A-z]\w*)\s*\)
+      push: class-block
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: entity.other.attribute-name
+        4: variable.parameter.function.luo
+
+    # Function declaration
+    - match: \b(static\s+)?(function)
+      captures:
+        1: keyword.declaration.luo
+        2: keyword.declaration.luo
+        3: entity.other.attribute-name
+        4: variable.parameter.function.luo
+      push:
+        # Just the function name
+        - match: ([_A-z]\w*)\s*(\()
+          push: parameters
+          captures:
+            1: entity.other.attribute-name
+            2: punctuation.definition.parameters.end.luo
+
+        # Var args
+        - match: (\.\.\.)\s*([_A-z]\w*)\s*(\()
+          push: parameters
+          captures:
+            1: entity.other.attribute-name
+            2: entity.other.attribute-name
+            3: punctuation.definition.parameters.end.luo
+          
+        # Return type with comma
+        - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})(\s+allowsNil)?)?\s*,
+          captures:
+            1: support.class.luo
+            2: support.class.luo
+            3: support.class.luo
+            4: support.class.luo
+            5: keyword.operator.luo
+            6: support.class.luo
+            7: keyword.other.luo
+        # Return type with the function name after it
+        - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})\s+(allowsNil\s+)?)?([_A-z]\w*)\s*(\()
+          push: parameters
+          captures:
+            1: support.class.luo
+            2: support.class.luo
+            3: support.class.luo
+            4: support.class.luo
+            5: keyword.operator.luo
+            6: support.class.luo
+            7: keyword.other.luo
+            8: entity.other.attribute-name
+            9: punctuation.definition.parameters.end.luo
+
+    # Highlight any syntax errors
+    # - include: errors
+  # comment:
+  #   - meta_scope: comment.block.luo
+  #   - match: \]\1\]
+  #     pop: true
+
+  # A standard block
+  block:
+    - include: lua
+    - include: block-end
+
+  class-block:
+    # - include: block-end
+    - match: \b(end)\b
+      set: class
+      scope: keyword.control.luo
+    - include: lua
+    - match: \b(self)\b
+      scope: variable.language.self.luo
+    - match: \b(super)\b
+      scope: variable.language.super.luo
+    - match: \b(static)\b
+      scope: variable.language.static.luo
+
+  block-end:
+    - match: \b(end)\b
+      pop: true
+      scope: keyword.control.luo
+
+  enum-table:
+    # Capture tables within the table
+    - match: \{
+      push: enum-table
+    - match: \(
+      push: enum-table
+    - match: \)
+      pop: true
+    - match: \}
+      pop: true
+    - include: literals
+
+  parameter-brackets:
+    - include: literals
+    - match: \)
+      pop: true
+
+  parameters:
+    - match: \(
+      push: parameter-brackets
+    - match: \)
+      scope: punctuation.definition.parameters.end.luo
+      set: class-block
+    # Var args
+    - match: (\.\.\.)
+      scope: entity.other.attribute-name
+      push:
+      - match: \)
+        scope: punctuation.definition.parameters.end.luo
+        set: class-block
+      - match: .
+        scope: invalid.illegal.expected-bracket
+
+    # Parameter with default value
+    - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})\s+(allowsNil\s+)?)?([_A-z]\w*)\s*(=)
+      push:
+        - match: \)
+          scope: punctuation.definition.parameters.end.luo
+          set: class-block
+        - match: \,
+          pop: true
+        - include: literals 
+      # we need to push the literals, but escape when we're in an unescaped ,
+      captures:
+        1: support.class.luo
+        2: support.class.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: keyword.operator.luo
+        6: support.class.luo
+        7: keyword.other.luo
+        8: entity.other.attribute-name
+
+    - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})\s+(allowsNil\s+)?)?([_A-z]\w*)\s*
+      push:
+      - match: \)
+        scope: punctuation.definition.parameters.end.luo
+        set: class-block
+      - match: \,
+        pop: true
+      - match: .
+        scope: invalid.illegal.expected-bracket
+      captures:
+        1: support.class.luo
+        2: support.class.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: keyword.operator.luo
+        6: support.class.luo
+        7: keyword.other.luo
+        8: entity.other.attribute-name
+
+# TODO: figure out how to avoid using set: so this doesn't need to be repeated
+
+  parameters-interface:
+    - match: \(
+      push: parameter-brackets
+    - match: \)
+      set: interface
+    # Var args
+    - match: (\.\.\.)
+      scope: entity.other.attribute-name
+      push:
+      - match: \)
+        scope: punctuation.definition.parameters.end.luo
+        set: interface
+      - match: .
+        scope: invalid.illegal.expected-bracket
+
+    # Parameter with default value
+    - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})\s+(allowsNil\s+)?)?([_A-z]\w*)\s*(=)
+      push:
+        - match: \)
+          set: interface
+        - match: \,
+          pop: true
+        - include: literals 
+      # we need to push the literals, but escape when we're in an unescaped ,
+      captures:
+        1: support.class.luo
+        2: support.class.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: keyword.operator.luo
+        6: support.class.luo
+        7: keyword.other.luo
+        8: entity.other.attribute-name
+
+    - match: (?:(?:\b([_A-z]\w*)\b|\s+([_A-z]\w*\.[_A-z]\w*)\b|\s+{\s*([_A-z]\w*)\s*}|\s+{\s*([_A-z]\w*)\s*(=)\s*([_A-z]\w*)\s*})\s+(allowsNil\s+)?)?([_A-z]\w*)\s*
+      push:
+      - match: \)
+        set: interface
+      - match: \,
+        pop: true
+      - match: .
+        scope: invalid.illegal.expected-bracket
+      captures:
+        1: support.class.luo
+        2: support.class.luo
+        3: support.class.luo
+        4: support.class.luo
+        5: keyword.operator.luo
+        6: support.class.luo
+        7: keyword.other.luo
+        8: entity.other.attribute-name
+
+
+      # scope: keyword.declaration.luo
+      # set: class
