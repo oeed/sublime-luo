@@ -50,8 +50,7 @@ contexts:
         5: variable.parameter.function.luo
         6: punctuation.definition.parameters.end.luo
   
-    # An assignment declared/anonymous function
-    # Function assigned to a value manually
+    # An assignment declared function
     - match: ([a-zA-Z_.:]+[.:])?([a-zA-Z_]\w*)\s*(\=)\s*(function)\s*(\()([^)]*)(\))
       push: block
       captures:
@@ -62,6 +61,15 @@ contexts:
         5: punctuation.definition.parameters.begin.luo
         6: variable.parameter.function.luo
         7: punctuation.definition.parameters.end.luo
+
+    # An anonymous function
+    - match: (function)\s*(\()([^)]*)(\))
+      push: block
+      captures:
+        1: keyword.control.luo
+        2: punctuation.definition.parameters.begin.luo
+        3: variable.parameter.function.luo
+        4: punctuation.definition.parameters.end.luo
 
   comments:
     # Single-line comment
