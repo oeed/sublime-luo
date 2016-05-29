@@ -255,7 +255,7 @@ contexts:
       push: class-attribute-declaration
 
     # Instance variable declaration
-    - match: \b(static\s+)?(local)\s+([_A-z]\w*)\s*(=)
+    - match: \b(static\s+)?(local)\s+([_A-z]\w*)\s*(=)?
       captures:
         1: keyword.declaration.luo
         2: keyword.declaration.luo
